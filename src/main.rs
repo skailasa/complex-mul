@@ -1,17 +1,9 @@
-use std::{time::Instant, vec};
-
-use complex_mul::{matvec4x4_col_major, matvec4x4_row_major, ComplexMul4x4Neon32, ComplexMul4x4NeonFcma32};
-
-use itertools::izip;
-use num_complex::ComplexFloat;
-use rlst::c32;
+use complex_mul::{matvec4x4_col_major, ComplexMul4x4NeonFcma32};
 use num_traits::{One, Zero};
-use pulp::aarch64::{Neon, NeonFcma};
-
+use pulp::aarch64::NeonFcma;
+use rlst::c32;
 
 fn main() {
-
-
     let mut vector = [c32::zero(); 4];
     let mut save_buffer = [c32::zero(); 4];
 
@@ -19,10 +11,10 @@ fn main() {
     let alpha = c32::one();
 
     for i in 0..4 {
-        let num = (i+1) as f32;
+        let num = (i + 1) as f32;
         vector[i] = c32::new(num, num);
         for j in 0..4 {
-            matrix[i*4+j] = c32::new((i + 1) as f32,( j + 1) as f32);
+            matrix[i * 4 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
         }
     }
 
@@ -38,11 +30,11 @@ fn main() {
     let alpha = 1f32;
 
     for i in 0..matrix.len() {
-        let num = (i+1) as f32;
+        let num = (i + 1) as f32;
         vector[i] = c32::new(num, num);
         // expected[i] = matrix[i] * vector[i];
         for j in 0..matrix.len() {
-            matrix[i][j] = c32::new((i + 1) as f32,( j + 1) as f32);
+            matrix[i][j] = c32::new((i + 1) as f32, (j + 1) as f32);
         }
     }
 
@@ -64,10 +56,9 @@ fn main() {
         alpha,
         matrix: &matrix,
         vector: &vector,
-        result: &mut result
+        result: &mut result,
     });
 
     println!("BAR {:?}", result);
     // println!("SIMD {:?}", s.elapsed());
-
 }

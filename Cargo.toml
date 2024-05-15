@@ -15,5 +15,9 @@ rlst = "0.1.1"
 criterion = "0.5.1"
 
 [[bench]]
-name = "4_by_4"
+name = "4x4"
+harness = false
+
+[[bench]]
+name = "8x8"
 harness = false
