@@ -200,9 +200,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "coe-rs"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e8f1e641542c07631228b1e0dc04b69ae3c1d58ef65d5691a439711d805c698"
+
+[[package]]
 name = "complex-mul"
 version = "0.1.0"
 dependencies = [
+ "coe-rs",
  "criterion",
  "itertools 0.12.1",
  "num-complex",

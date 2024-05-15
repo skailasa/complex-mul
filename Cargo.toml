@@ -4,9 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-criterion = "0.5.1"
+coe-rs = "0.1.2"
 itertools = "0.12.1"
 num-complex = "0.4.6"
 num-traits = "0.2.19"
 pulp = "0.18.12"
 rlst = "0.1.1"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "4_by_4"
+harness = false

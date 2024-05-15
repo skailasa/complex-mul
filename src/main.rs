@@ -1,32 +1,65 @@
-use std::time::Instant;
+use std::{time::Instant, vec};
 
-use complex_mul::ComplexMulNeon32;
+use complex_mul::{matvec4x4_col_major, matvec4x4_row_major, ComplexMul4x4Neon32, ComplexMul4x4NeonFcma32};
 
 use itertools::izip;
 use num_complex::ComplexFloat;
 use rlst::c32;
-use num_traits::Zero;
-use pulp::aarch64::Neon;
+use num_traits::{One, Zero};
+use pulp::aarch64::{Neon, NeonFcma};
+
 
 fn main() {
 
-    let mut matrix = [c32::zero(); 4];
+
+    let mut vector = [c32::zero(); 4];
+    let mut save_buffer = [c32::zero(); 4];
+
+    let mut matrix = [c32::zero(); 16];
+    let alpha = c32::one();
+
+    for i in 0..4 {
+        let num = (i+1) as f32;
+        vector[i] = c32::new(num, num);
+        for j in 0..4 {
+            matrix[i*4+j] = c32::new((i + 1) as f32,( j + 1) as f32);
+        }
+    }
+
+    matvec4x4_col_major(&matrix, &vector, &mut save_buffer, alpha);
+
+    println!("FOO {:?}", save_buffer);
+
+    let mut matrix = [[c32::zero(); 4]; 4];
     let mut vector = [c32::zero(); 4];
     let mut result = [c32::zero(); 4];
-    // let mut expected = [c32::zero(); 4];
+    let mut expected = [c32::zero(); 4];
 
-    let alpha = 0f32;
+    let alpha = 1f32;
 
     for i in 0..matrix.len() {
         let num = (i+1) as f32;
-        matrix[i] = c32::new(-1. * num, -2. * num);
-        vector[i] = c32::new(num, 2. * num);
+        vector[i] = c32::new(num, num);
         // expected[i] = matrix[i] * vector[i];
+        for j in 0..matrix.len() {
+            matrix[i][j] = c32::new((i + 1) as f32,( j + 1) as f32);
+        }
     }
 
-    let simd = Neon::try_new().unwrap();
+    // let simd = Neon::try_new().unwrap();
+    // let s = Instant::now();
+    // simd.vectorize(ComplexMulNeon32 {
+    //     simd,
+    //     alpha,
+    //     matrix: &matrix,
+    //     vector: &vector,
+    //     result: &mut result
+    // });
+    // println!("SIMD {:?}", s.elapsed());
 
-    simd.vectorize(ComplexMulNeon32 {
+    // let s = Instant::now();
+    let simd = NeonFcma::try_new().unwrap();
+    simd.vectorize(ComplexMul4x4NeonFcma32 {
         simd,
         alpha,
         matrix: &matrix,
@@ -34,48 +67,7 @@ fn main() {
         result: &mut result
     });
 
-    // println!("expected {:?}", expected);
-    // println!("found {:?}", result);
-
-    // let n = 1000000*4;
-    // let mut left = vec![c32::zero(); n];
-    // let mut right = vec![c32::zero(); n];
-    // let mut result = vec![c32::zero(); n];
-    // let mut expected = vec![c32::zero(); n];
-
-    // for i in 0..left.len() {
-    //     let num = (i+1) as f32;
-    //     left[i] = c32::new(-1. * num, -2. * num);
-    //     right[i] = c32::new(num, 2. * num);
-    // }
-
-    // let (left_head, left_tail) = pulp::as_arrays::<4, _>(left.as_slice());
-    // let (right_head, right_tail) = pulp::as_arrays::<4, _>(right.as_slice());
-    // let (result_head, result_tail) = pulp::as_arrays_mut::<4, _>(result.as_mut_slice());
-
-    // let simd = Neon::try_new().unwrap();
-    // let alpha = 0.0;
-
-    // let s = Instant::now();
-    // for (left, right, res) in izip!(left_head, right_head, result_head) {
-    //     simd.vectorize(ComplexMulNeon32 {
-    //         simd,
-    //         alpha,
-    //         left: &left,
-    //         right: &right,
-    //         result:  res
-    //     })
-    // };
+    println!("BAR {:?}", result);
     // println!("SIMD {:?}", s.elapsed());
 
-    // let s = Instant::now();
-    // for i in 0..left.len() {
-    //     expected[i] = left[i] * right[i];
-    // }
-    // println!("AUTO {:?}", s.elapsed());
-
-    // expected.iter().zip(result.iter()).for_each(|(a, b)| {
-    //     // println!("{:?} {:?} {:?}",a, b, (a-b).abs());
-    //     assert!((a-b).abs() < 1e-5)
-    // })
 }

@@ -1,19 +1,134 @@
 use std::arch::aarch64::{float32x4_t, float32x4x2_t};
 
-use rlst::{c32, c64};
+use rlst::{c32, c64, RlstScalar};
 
-use pulp::{aarch64::Neon, f32x4};
+use pulp::{aarch64::Neon, f32x4, Simd, aarch64::NeonFcma};
 use num_traits::Zero;
+use coe;
 
-pub struct ComplexMulNeon32<'a> {
+pub fn matvec4x4_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
+where
+    U: RlstScalar,
+{
+    let s1 = vector[0];
+    let s2 = vector[1];
+    let s3 = vector[2];
+    let s4 = vector[3];
+
+    for i in 0..4 {
+        let mut sum = U::zero();
+        sum += matrix[i*4] * s1;
+        sum += matrix[i*4 + 1] * s2;
+        sum += matrix[i*4 + 2] * s3;
+        sum += matrix[i*4 + 3] * s4;
+        save_buffer[i] += sum * alpha
+    }
+}
+
+
+pub fn matvec8x8_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
+where
+    U: RlstScalar,
+{
+    let s1 = vector[0];
+    let s2 = vector[1];
+    let s3 = vector[2];
+    let s4 = vector[3];
+    let s5 = vector[4];
+    let s6 = vector[5];
+    let s7 = vector[6];
+    let s8 = vector[7];
+
+    for i in 0..8 {
+        let mut sum = U::zero();
+        sum += matrix[i*4] * s1;
+        sum += matrix[i*4 + 1] * s2;
+        sum += matrix[i*4 + 2] * s3;
+        sum += matrix[i*4 + 3] * s4;
+        sum += matrix[i*4 + 4] * s5;
+        sum += matrix[i*4 + 5] * s6;
+        sum += matrix[i*4 + 6] * s7;
+        sum += matrix[i*4 + 7] * s8;
+        save_buffer[i] += sum * alpha
+    }
+}
+
+
+pub fn matvec4x4_col_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
+where
+    U: RlstScalar,
+{
+
+    for i in 0..4 {
+        // cols
+        for j in 0..4 {
+            // rows
+            save_buffer[j] += matrix[i*4 + j] * vector[j]
+        }
+    }
+
+    for i in 0..4 {
+        save_buffer[i] *= alpha
+    }
+}
+
+pub fn matvec8x8_col_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
+where
+    U: RlstScalar,
+{
+
+    for i in 0..8 {
+        // cols
+        for j in 0..8 {
+            // rows
+            save_buffer[j] += matrix[i*8 + j] * vector[j]
+        }
+    }
+
+    for i in 0..8 {
+        save_buffer[i] *= alpha
+    }
+}
+
+
+#[inline]
+fn fma<T: 'static>(x: T, y: T, z: T) -> T {
+    use coe::coerce_static as to;
+    if coe::is_same::<T, f32>() {
+        to(f32::mul_add(to(x), to(y), to(z)))
+    } else if coe::is_same::<T, f64>() {
+        to(f64::mul_add(to(x), to(y), to(z)))
+    } else {
+        panic!()
+    }
+}
+
+pub struct ComplexMul4x4Neon32<'a> {
     pub simd: Neon,
     pub alpha: f32,
-    pub matrix: &'a [c32; 4],
+    pub matrix: &'a [[c32; 4]; 4],
     pub vector: &'a [c32; 4],
     pub result: &'a mut [c32; 4]
 }
 
-impl pulp::NullaryFnOnce for ComplexMulNeon32<'_> {
+
+pub struct ComplexMul4x4NeonFcma32<'a> {
+    pub simd: NeonFcma,
+    pub alpha: f32,
+    pub matrix: &'a [[c32; 4]; 4],
+    pub vector: &'a [c32; 4],
+    pub result: &'a mut [c32; 4]
+}
+
+pub struct ComplexMul8x8NeonFcma32<'a> {
+    pub simd: NeonFcma,
+    pub alpha: f32,
+    pub matrix: &'a [[c32; 8]; 8],
+    pub vector: &'a [c32; 8],
+    pub result: &'a mut [c32; 8]
+}
+
+impl pulp::NullaryFnOnce for ComplexMul4x4Neon32<'_> {
 
     type Output = ();
 
@@ -22,30 +137,84 @@ impl pulp::NullaryFnOnce for ComplexMulNeon32<'_> {
         let Self {
             simd,
             alpha,
-            matrix: left,
-            vector: right,
+            matrix,
+            vector,
             result
         } = self;
 
-        unsafe {
-            let ptr = left.as_ptr() as *const f32;
-            let left_d: float32x4x2_t = simd.neon.vld2q_f32(ptr);
+        let mut acc_im = f32x4(0., 0., 0., 0.);
+        let mut acc_re = f32x4(0., 0., 0., 0.);
 
-            let ptr = right.as_ptr() as *const f32;
-            let right_d = simd.neon.vld2q_f32(ptr);
+        let ptr = vector.as_ptr() as *const f32;
+        let float32x4x2_t(vec_re, vec_im)  =  unsafe { simd.neon.vld2q_f32(ptr) };
+        let c: f32x4  = unsafe { std::mem::transmute(vec_re) };
+        let d: f32x4  = unsafe { std::mem::transmute(vec_im) };
 
-            let ac = simd.neon.vmulq_f32(left_d.0, right_d.0);
-            let bd = simd.neon.vmulq_f32(left_d.1, right_d.1);
-            let re = simd.neon.vsubq_f32(ac, bd);
+        for column in matrix.iter() {
+            let ptr = column.as_ptr() as *const f32;
+            let float32x4x2_t(row_re, row_im)  =  unsafe { simd.neon.vld2q_f32(ptr) };
+            let a: f32x4  = unsafe { std::mem::transmute(row_re) };
+            let b: f32x4  = unsafe { std::mem::transmute(row_im) };
 
-            let ad = simd.neon.vmulq_f32(left_d.0, right_d.1);
-            let bc = simd.neon.vmulq_f32(left_d.1, right_d.0);
-            let im = simd.neon.vaddq_f32(ad, bc);
+            let ac = simd.f32s_neg(simd.mul_f32x4(a, c));
+            let re = simd.f32s_neg(simd.mul_add_f32x4(b, d, ac));
+            acc_re = simd.add_f32x4(acc_re, re);
 
-            let res = float32x4x2_t(re, im);
-            let ptr = result.as_ptr() as *mut f32;
-            simd.neon.vst2q_f32(ptr, res);
+            let ad = simd.mul_f32x4(a, d);
+            let im = simd.mul_add_f32x4(b, c, ad);
+            acc_im = simd.add_f32x4(acc_im, im);
         }
 
+        let acc_re: float32x4_t = unsafe { std::mem::transmute(acc_re)};
+        let acc_im: float32x4_t = unsafe { std::mem::transmute(acc_im)};
+
+        let acc_re = simd.neon.vmulq_n_f32(acc_re, alpha);
+        let acc_im = simd.neon.vmulq_n_f32(acc_im, alpha);
+
+        let res = float32x4x2_t(acc_re, acc_im);
+        let ptr =  result.as_ptr() as *mut f32;
+        unsafe { simd.neon.vst2q_f32(ptr, res) };
+    }
+}
+
+
+impl pulp::NullaryFnOnce for ComplexMul4x4NeonFcma32<'_> {
+
+    type Output = ();
+
+    #[inline(always)]
+    fn call(self) -> Self::Output {
+        let Self {
+            simd,
+            alpha,
+            matrix,
+            vector,
+            result
+        } = self;
+
+        let mut a1 = f32x4(0., 0., 0., 0.);
+        let mut a2 = f32x4(0., 0., 0., 0.);
+
+        let [v1, v2]: [f32x4; 2] = pulp::cast(*vector);
+
+        for column in matrix.iter() {
+
+            let [m1, m2]: [f32x4; 2] = pulp::cast(*column);
+
+            a1 = simd.c32s_mul_add_e(m1, v1, a1);
+            a2 = simd.c32s_mul_add_e(m2, v2, a2);
+        }
+
+        let a1: float32x4_t = unsafe { std::mem::transmute(a1)};
+        let a2: float32x4_t = unsafe { std::mem::transmute(a2)};
+
+        let a1 = simd.neon.vmulq_n_f32(a1, alpha);
+        let a2 = simd.neon.vmulq_n_f32(a2, alpha);
+
+        let ptr =  result.as_ptr() as *mut f32;
+        unsafe { simd.neon.vst1q_f32(ptr, a1) };
+        unsafe { simd.neon.vst1q_f32(ptr.add(4), a2) };
+
+        // println!("{:?} {:?}", result, 1);
     }
 }
