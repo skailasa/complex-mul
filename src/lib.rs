@@ -5,6 +5,12 @@ use rlst::{c32, RlstScalar};
 use coe;
 use pulp::{aarch64::Neon, aarch64::NeonFcma, f32x4, Simd};
 
+fn slice_to_array<T>(slice: &[T]) -> &[T; 64] {
+    assert_eq!(slice.len(), 64, "The slice must have exactly 64 elements.");
+    unsafe { &*(slice.as_ptr() as *const [T; 64]) }
+}
+
+
 pub fn matvec4x4_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
     U: RlstScalar,
@@ -116,7 +122,31 @@ pub struct ComplexMul4x4NeonFcma32<'a> {
 pub struct ComplexMul8x8NeonFcma32<'a> {
     pub simd: NeonFcma,
     pub alpha: f32,
-    pub matrix: &'a [[c32; 8]; 8],
+    pub matrix: &'a [c32; 64],
+    pub vector: &'a [c32; 8],
+    pub result: &'a mut [c32; 8],
+}
+
+pub struct ComplexMul8x8NeonFcma64<'a> {
+    pub simd: NeonFcma,
+    pub alpha: f32,
+    pub matrix: &'a [c32; 64],
+    pub vector: &'a [c32; 8],
+    pub result: &'a mut [c32; 8],
+}
+
+pub struct ComplexMul8x8Avx232<'a> {
+    pub simd: NeonFcma,
+    pub alpha: f32,
+    pub matrix: &'a [c32; 64],
+    pub vector: &'a [c32; 8],
+    pub result: &'a mut [c32; 8],
+}
+
+pub struct ComplexMul8x8Avx264<'a> {
+    pub simd: NeonFcma,
+    pub alpha: f32,
+    pub matrix: &'a [c32; 64],
     pub vector: &'a [c32; 8],
     pub result: &'a mut [c32; 8],
 }
@@ -234,6 +264,7 @@ impl pulp::NullaryFnOnce for ComplexMul8x8NeonFcma32<'_> {
         let mut a3 = f32x4(0., 0., 0., 0.);
         let mut a4 = f32x4(0., 0., 0., 0.);
 
+        let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
         let [v1, v2, v3, v4]: [f32x4; 4] = pulp::cast(*vector);
 
         // Unroll loop
@@ -327,15 +358,15 @@ mod test {
 
         matvec8x8_col_major(&matrix, &vector, &mut expected, alpha);
 
-        let mut matrix = [[c32::zero(); 8]; 8];
+        let mut matrix = [c32::zero(); 64];
         let mut vector = [c32::zero(); 8];
         let mut result = [c32::zero(); 8];
 
-        for i in 0..matrix.len() {
+        for i in 0..8 {
             let num = (i + 1) as f32;
             vector[i] = c32::new(num, num);
-            for j in 0..matrix.len() {
-                matrix[i][j] = c32::new((i + 1) as f32, (j + 1) as f32);
+            for j in 0..8 {
+                matrix[i*8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
             }
         }
 

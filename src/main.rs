@@ -29,11 +29,11 @@ fn main() {
 
     let alpha = 1f32;
 
-    for i in 0..matrix.len() {
+    for i in 0..8 {
         let num = (i + 1) as f32;
         vector[i] = c32::new(num, num);
         // expected[i] = matrix[i] * vector[i];
-        for j in 0..matrix.len() {
+        for j in 0..8 {
             matrix[i][j] = c32::new((i + 1) as f32, (j + 1) as f32);
         }
     }

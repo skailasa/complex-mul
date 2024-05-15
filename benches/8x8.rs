@@ -30,18 +30,18 @@ pub fn naive(c: &mut Criterion) {
 pub fn explicit_simd(c: &mut Criterion) {
     let mut group = c.benchmark_group("explicit simd");
 
-    let mut matrix = [[c32::zero(); 8]; 8];
+    let mut matrix = [c32::zero(); 64];
     let mut vector = [c32::zero(); 8];
     let mut result = [c32::zero(); 8];
 
     let alpha = 1f32;
 
-    for i in 0..matrix.len() {
+    for i in 0..8 {
         let num = (i + 1) as f32;
         vector[i] = c32::new(num, num);
         // expected[i] = matrix[i] * vector[i];
-        for j in 0..matrix.len() {
-            matrix[i][j] = c32::new((i + 1) as f32, (j + 1) as f32);
+        for j in 0..8 {
+            matrix[i*8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
         }
     }
 
