@@ -1,14 +1,6 @@
 use std::arch::aarch64::{float32x4_t, float32x4x2_t, float64x2_t};
-
-use rlst::{c32, c64, RlstScalar};
-
-use coe;
 use pulp::{aarch64::Neon, aarch64::NeonFcma, f32x4, f64x2, Simd};
-
-fn slice_to_array<T>(slice: &[T]) -> &[T; 64] {
-    assert_eq!(slice.len(), 64, "The slice must have exactly 64 elements.");
-    unsafe { &*(slice.as_ptr() as *const [T; 64]) }
-}
+use rlst::{c32, c64, RlstScalar};
 
 
 pub fn matvec4x4_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
