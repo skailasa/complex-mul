@@ -475,7 +475,7 @@ mod test {
 
         let mut matrix = [c64::zero(); 64];
         let mut vector = [c64::zero(); 8];
-        let alpha = c64::one() * 10.;
+        let alpha = c64::one() * 12.;
 
         for i in 0..8 {
             let num = (i + 1) as f64;
