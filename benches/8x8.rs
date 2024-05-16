@@ -111,6 +111,8 @@ pub mod aarch64 {
     }
 }
 
+pub use aarch64::*;
+
 #[cfg(target_arch = "x86_64")]
 criterion_group!(benches, naive);
 
