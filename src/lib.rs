@@ -38,22 +38,6 @@ pub mod aarch64 {
         pub result: &'a mut [c64; 8],
     }
 
-    // pub struct ComplexMul8x8Avx232<'a> {
-    //     pub simd: NeonFcma,
-    //     pub alpha: f32,
-    //     pub matrix: &'a [c32; 64],
-    //     pub vector: &'a [c32; 8],
-    //     pub result: &'a mut [c32; 8],
-    // }
-
-    // pub struct ComplexMul8x8Avx264<'a> {
-    //     pub simd: NeonFcma,
-    //     pub alpha: f32,
-    //     pub matrix: &'a [c32; 64],
-    //     pub vector: &'a [c32; 8],
-    //     pub result: &'a mut [c32; 8],
-    // }
-
     impl pulp::NullaryFnOnce for ComplexMul4x4Neon32<'_> {
         type Output = ();
 
@@ -641,6 +625,195 @@ pub mod aarch64 {
 
 #[cfg(target_arch = "aarch64")]
 pub use aarch64::*;
+
+#[cfg(target_arch = "x86_64")]
+pub mod x86_64 {
+    use super::*;
+
+    use pulp::{f32x16, f32x8, f32x4, x86::V3, Simd};
+    use num_traits::Zero;
+
+    pub struct ComplexMul8x8Avx32<'a> {
+        pub simd: V3,
+        pub alpha: f32,
+        pub matrix: &'a [c32; 64],
+        pub vector: &'a [c32; 8],
+        pub result: &'a mut [c32; 8],
+    }
+
+    pub struct ComplexMul8x8Avx64<'a> {
+        pub simd: V3,
+        pub alpha: f32,
+        pub matrix: &'a [c32; 64],
+        pub vector: &'a [c32; 8],
+        pub result: &'a mut [c32; 8],
+    }
+
+    pub const fn _MM_SHUFFLE(z: u32, y: u32, x: u32, w: u32) -> i32 {
+        ((z << 6) | (y << 4) | (x << 2) | w) as i32
+    }
+
+    const MASK: i32 = _MM_SHUFFLE(1, 0, 1,0);
+    const MASK2: i32 = _MM_SHUFFLE(3, 2, 3,2);
+
+    impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
+
+        type Output = ();
+
+        fn call(self) -> Self::Output {
+
+            let Self {
+                simd,
+                alpha,
+                matrix,
+                vector,
+                result,
+            } = self;
+
+
+            // Load vector
+            let [v1, v2]: [f32x8; 2] = pulp::cast(*vector);
+
+            // v1 = [a, b, c, d, ...]
+
+            // De-interleave vector
+            let v01_re = f32x4(v1.0, v1.0, v1.0, v1.0); // [a, a, a, a]
+            let v01_im = f32x4(v1.1, v1.1, v1.1, v1.1); // [b, b, b, b]
+            let v02_re = f32x4(v1.2, v1.2, v1.2, v1.2); // [a, a, a, a]
+            let v02_im = f32x4(v1.3, v1.3, v1.3, v1.3); // [b, b, b, b]
+            let v03_re = f32x4(v1.4, v1.4, v1.4, v1.4); // [a, a, a, a]
+            let v03_im = f32x4(v1.5, v1.5, v1.5, v1.5); // [b, b, b, b]
+            let v04_re = f32x4(v1.6, v1.6, v1.6, v1.6); // [a, a, a, a]
+            let v04_im = f32x4(v1.7, v1.7, v1.7, v1.7); // [b, b, b, b]
+
+            // Unroll loop
+            let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
+            let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[0]); // column of matrix
+
+            // Deinterleave row
+            let m1_re = f32x4(m1.0, m1.2, m1.4, m1.6); // [e, g, i, k]
+            let m1_im = f32x4(m1.1, m1.3, m1.5, m1.7); // [f, h, j, l]
+            let m2_re = f32x4(m2.0, m2.2, m2.4, m2.6); // [e, g, i, k]
+            let m2_im = f32x4(m2.1, m2.3, m2.5, m2.7); // [f, h, j, l]
+
+            // [ae, ag, ai, ak]
+            let a1: f32x4 = simd.mul_f32x4(v01_re, m1_re);
+            let a2: f32x4 = simd.mul_f32x4(v01_re, m2_re);
+
+            // [af, ah, aj, al]
+            let b1: f32x4 = simd.mul_f32x4(v01_re, m1_im);
+            let b2: f32x4 = simd.mul_f32x4(v01_re, m2_im);
+
+            // [be, bg, bi, bk]
+            let c1 = simd.mul_f32x4(v01_im, m1_re);
+            let c2 = simd.mul_f32x4(v01_im, m2_re);
+
+            // [bf, bh, bj, bl]
+            let d1 = simd.mul_f32x4(v01_im, m1_im);
+            let d2 = simd.mul_f32x4(v01_im, m2_im);
+
+            // [ae-bf, ag-bh, ai-bj, ak-bl]
+            let re1 = simd.sub_f32x4(a1, d1);
+            let re2 = simd.sub_f32x4(a2, d2);
+
+            // [af+be, ah+bg, aj+bi, al+bk]
+            let im1 = simd.add_f32x4(b1, c1);
+            let im2 = simd.add_f32x4(b2, c2);
+
+            let r1 = f32x8(re1.0, im1.0, re1.1, im1.1, re1.2, im1.2, re1.3, im1.3);
+            let r2 = f32x8(re2.0, im2.0, re2.1, im2.1, re2.2, im2.2, re2.3, im2.3);
+
+
+
+
+
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+
+        use super::*;
+        use num_traits::{One, Zero};
+
+        #[test]
+        fn test_8x8_f32_row_major() {
+            let mut expected = [c32::zero(); 8];
+            let mut expected_t = [c32::zero(); 8];
+
+            let mut matrix = [c32::zero(); 64];
+            let mut vector = [c32::zero(); 8];
+            let alpha = c32::one() * 12.;
+
+            for i in 0..8 {
+                let num = (i + 1) as f32;
+                vector[i] = c32::new(num, -num);
+                for j in 0..8 {
+                    matrix[i * 8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
+                }
+            }
+
+            let mut matrix_t = [c32::zero(); 64];
+            for i in 0..8 {
+                // rows
+                for j in 0..8 {
+                    // cols
+                    matrix_t[j * 8 + i] = matrix[i * 8 + j];
+                }
+            }
+
+            // for i in 0..8 {
+            //     for j in 0..8 {
+            //         print!("{:4} ", matrix[i + j * 8]);
+            //     }
+            //     println!();
+            // }
+
+            // println!("");
+
+            // for i in 0..8 {
+            //     for j in 0..8 {
+            //         print!("{:4} ", matrix_t[i + j * 8]);
+            //     }
+            //     println!();
+            // }
+
+            matvec8x8_col_major(&matrix, &vector, &mut expected, alpha);
+            matvec8x8_row_major(&matrix_t, &vector, &mut expected_t, alpha);
+
+            expected
+                .iter()
+                .zip(expected_t.iter())
+                .for_each(|(e, e_t)| assert!((e - e_t).abs() < 1e-5));
+
+            let mut matrix = [c32::zero(); 64];
+            let mut result = [c32::zero(); 8];
+
+            for i in 0..8 {
+                for j in 0..8 {
+                    matrix[i * 8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
+                }
+            }
+
+            let simd = V3::try_new().unwrap();
+            simd.vectorize(ComplexMul8x8Avx32 {
+                simd,
+                alpha: alpha.re(),
+                matrix: &matrix,
+                vector: &vector,
+                result: &mut result,
+            });
+
+            assert!(false);
+            // expected.iter().zip(result).for_each(|(e, r)| {
+            //     println!("e {:?} r {:?}", e, r);
+            //     assert!((e - r).abs() < 1e-10)
+            // });
+        }    }
+}
+
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::*;
 
 pub fn matvec4x4_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
