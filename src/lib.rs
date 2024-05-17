@@ -668,6 +668,7 @@ pub mod x86_64 {
             let mut a2 = simd.splat_f32x4(0.);
             let mut a3 = simd.splat_f32x4(0.);
             let mut a4 = simd.splat_f32x4(0.);
+            let alpha = simd.splat_f32x4(alpha);
 
             let [v1, v2, v3, v4]: [f32x4; 4] = pulp::cast(*vector);
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
@@ -913,6 +914,11 @@ pub mod x86_64 {
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
+            a1 = simd.mul_f32x4(alpha, a1);
+            a2 = simd.mul_f32x4(alpha, a2);
+            a3 = simd.mul_f32x4(alpha, a3);
+            a4 = simd.mul_f32x4(alpha, a4);
+
             let ptr = result.as_mut_ptr() as *mut f32;
 
             unsafe { simd.sse._mm_store_ps(ptr, std::mem::transmute(a1)) }
@@ -975,9 +981,8 @@ pub mod x86_64 {
 
             println!("expected {:?}", expected);
             println!("result {:?}", result);
-            assert!(false);
+
             expected.iter().zip(result).for_each(|(e, r)| {
-                println!("e {:?} r {:?}", e, r);
                 assert!((e - r).abs() < 1e-10)
             });
         }
