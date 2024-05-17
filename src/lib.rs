@@ -634,6 +634,7 @@ pub mod x86_64 {
 
     use num_traits::Zero;
     use pulp::{f32x16, f32x4, f32x8, x86::V3, Simd};
+    // use std::arch::x86_64::{_mm_moveldup_ps};
 
     pub struct ComplexMul8x8Avx32<'a> {
         pub simd: V3,
@@ -663,252 +664,261 @@ pub mod x86_64 {
                 result,
             } = self;
 
-            // Accumulators
-            let mut a1 = simd.avx._mm256_set1_ps(0.);
-            let mut a2 = simd.avx._mm256_set1_ps(0.);
+            let mut a1 = simd.splat_f32x4(0.);
+            let mut a2 = simd.splat_f32x4(0.);
+            let mut a3 = simd.splat_f32x4(0.);
+            let mut a4 = simd.splat_f32x4(0.);
 
-            // Read matrix into slices
+            let [v1, v2, v3, v4]: [f32x4; 4] = pulp::cast(*vector);
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
 
-            // Negator
-            let neg = simd.avx._mm256_set_ps(-1., 1., -1., 1., -1., 1., -1., 1.);
-
-            // Scale
-            let alpha = simd.avx._mm256_set1_ps(alpha);
-
-            // Load vector
-            let [v1, v2, v3, v4]: [__m128; 4] = pulp::cast(*vector);
-
-            // Consider vector[0] matrix[0]
             {
-                let v01 = simd.sse._mm_shuffle_ps::<0b01000100>(v1, v1);
-                let v01 = simd.avx._mm256_broadcast_ps(&v01); // fill with first imag number repeated
-                let v01_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v01), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[0]);
+                let v1_re = f32x4(v1.0, v1.0, v1.0, v1.0); // First element of vector
+                let v1_im = f32x4(v1.1, v1.1, v1.1, v1.1);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[0]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v01);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v01);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v01_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v01_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[1] matrix[1]
             {
-                let v02 = simd.sse._mm_shuffle_ps::<0b11101110>(v1, v1);
-                let v02 = simd.avx._mm256_broadcast_ps(&v02); // fill with first imag number repeated
-                let v02_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v02), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[1]);
+                let v1_re = f32x4(v1.2, v1.2, v1.2, v1.2); // First element of vector
+                let v1_im = f32x4(v1.3, v1.3, v1.3, v1.3);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[1]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v02);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v02);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v02_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v02_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[2] matrix[2]
             {
-                let v03 = simd.sse._mm_shuffle_ps::<0b01000100>(v2, v2);
-                let v03 = simd.avx._mm256_broadcast_ps(&v03); // fill with first imag number repeated
-                let v03_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v03), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[2]);
+                let v1_re = f32x4(v2.0, v2.0, v2.0, v2.0); // First element of vector
+                let v1_im = f32x4(v2.1, v2.1, v2.1, v2.1);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[2]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v03);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v03);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v03_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v03_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[3] matrix[3]
             {
-                let v04 = simd.sse._mm_shuffle_ps::<0b11101110>(v2, v2);
-                let v04 = simd.avx._mm256_broadcast_ps(&v04); // fill with first imag number repeated
-                let v04_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v04), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[3]);
+                let v1_re = f32x4(v2.2, v2.2, v2.2, v2.2); // First element of vector
+                let v1_im = f32x4(v2.3, v2.3, v2.3, v2.3);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[3]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v04);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v04);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v04_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v04_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[4] matrix[4]
+
             {
-                let v05 = simd.sse._mm_shuffle_ps::<0b01000100>(v3, v3);
-                let v05: __m256 = simd.avx._mm256_broadcast_ps(&v05); // fill with first imag number repeated
-                let v05_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v05), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[4]);
+                let v1_re = f32x4(v3.0, v3.0, v3.0, v3.0); // First element of vector
+                let v1_im = f32x4(v3.1, v3.1, v3.1, v3.1);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[4]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v05);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v05);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v05_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v05_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[5] matrix[5]
             {
-                let v06 = simd.sse._mm_shuffle_ps::<0b11101110>(v3, v3);
-                let v06 = simd.avx._mm256_broadcast_ps(&v06); // fill with first imag number repeated
-                let v06_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v06), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[5]);
+                let v1_re = f32x4(v3.2, v3.2, v3.2, v3.2); // First element of vector
+                let v1_im = f32x4(v3.3, v3.3, v3.3, v3.3);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[5]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v06);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v06);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v06_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v06_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[6] matrix[6]
             {
-                let v07 = simd.sse._mm_shuffle_ps::<0b01000100>(v4, v4);
-                let v07: __m256 = simd.avx._mm256_broadcast_ps(&v07); // fill with first imag number repeated
-                let v07_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v07), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[6]);
+                let v1_re = f32x4(v4.0, v4.0, v4.0, v4.0); // First element of vector
+                let v1_im = f32x4(v4.1, v4.1, v4.1, v4.1);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[6]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v07);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v07);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v07_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v07_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
-            // Consider vector[7] matrix[7]
             {
-                let v08 = simd.sse._mm_shuffle_ps::<0b11101110>(v4, v4);
-                let v08 = simd.avx._mm256_broadcast_ps(&v08); // fill with first imag number repeated
-                let v08_s = simd
-                    .avx
-                    ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v08), neg); // switch real/imag parts, negate imaginary part
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[7]);
+                let v1_re = f32x4(v4.2, v4.2, v4.2, v4.2); // First element of vector
+                let v1_im = f32x4(v4.3, v4.3, v4.3, v4.3);
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[7]);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-                // 1. Find the real part of mult
-                let m1_re = simd.avx._mm256_mul_ps(m1, v08);
-                let m2_re = simd.avx._mm256_mul_ps(m2, v08);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-                // 2. Find imaginary part
-                let m1_im = simd.avx._mm256_mul_ps(m1, v08_s);
-                let m2_im = simd.avx._mm256_mul_ps(m2, v08_s);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-                let r1 = simd.avx._mm256_hsub_ps(m1_re, m1_im);
-                let r1 = simd.avx._mm256_permute_ps::<0b11011000>(r1);
-
-                let r2 = simd.avx._mm256_hsub_ps(m2_re, m2_im);
-                let r2 = simd.avx._mm256_permute_ps::<0b11011000>(r2);
-
-                a1 = simd.avx._mm256_add_ps(a1, r1);
-                a2 = simd.avx._mm256_add_ps(a2, r2);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
-
-            a1 = simd.avx._mm256_mul_ps(a1, alpha);
-            a2 = simd.avx._mm256_mul_ps(a2, alpha);
 
             let ptr = result.as_mut_ptr() as *mut f32;
-            unsafe { simd.avx._mm256_storeu_ps(ptr, a1) }
-            unsafe { simd.avx._mm256_storeu_ps(ptr.add(8), a2) }
+
+            unsafe { simd.sse._mm_store_ps(ptr, std::mem::transmute(a1)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(4), std::mem::transmute(a2)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(8), std::mem::transmute(a3)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(12), std::mem::transmute(a4)) }
         }
     }
 
@@ -963,6 +973,9 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
+            println!("expected {:?}", expected);
+            println!("result {:?}", result);
+            assert!(false);
             expected.iter().zip(result).for_each(|(e, r)| {
                 println!("e {:?} r {:?}", e, r);
                 assert!((e - r).abs() < 1e-10)
@@ -992,7 +1005,8 @@ where
         save_buffer[i] += sum * alpha
     }
 }
-
+#[inline(never)]
+// #[no_mangle]
 pub fn matvec8x8_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
     U: RlstScalar,
@@ -1031,6 +1045,7 @@ where
         save_buffer[i] += sum * alpha;
     }
 }
+
 
 pub fn matvec4x4_col_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
