@@ -112,7 +112,81 @@ pub mod aarch64 {
 }
 
 #[cfg(target_arch = "x86_64")]
-criterion_group!(benches, naive);
+pub mod x86_64 {
+    use super::*;
+    use complex_mul::{ComplexMul8x8Avx32};
+    use pulp::x86::V3;
+    pub fn explicit_simd(c: &mut Criterion) {
+        let mut group = c.benchmark_group("explicit simd");
+
+        let mut matrix = [c32::zero(); 64];
+        let mut vector = [c32::zero(); 8];
+        let mut result = [c32::zero(); 8];
+
+        let alpha = 1f32;
+
+        for i in 0..8 {
+            let num = (i + 1) as f32;
+            vector[i] = c32::new(num, num);
+            // expected[i] = matrix[i] * vector[i];
+            for j in 0..8 {
+                matrix[i * 8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
+            }
+        }
+
+        let simd = V3::try_new().unwrap();
+
+        group.bench_function("ComplexMul8x8Avx32", |b| {
+            b.iter(|| {
+                simd.vectorize(ComplexMul8x8Avx32 {
+                    simd,
+                    alpha,
+                    matrix: &matrix,
+                    vector: &vector,
+                    result: &mut result,
+                })
+            })
+        });
+
+        // let mut matrix = [c64::zero(); 64];
+        // let mut vector = [c64::zero(); 8];
+        // let mut result = [c64::zero(); 8];
+
+        // let alpha = 1f64;
+
+        // for i in 0..8 {
+        //     let num = (i + 1) as f64;
+        //     vector[i] = c64::new(num, num);
+        //     // expected[i] = matrix[i] * vector[i];
+        //     for j in 0..8 {
+        //         matrix[i * 8 + j] = c64::new((i + 1) as f64, (j + 1) as f64);
+        //     }
+        // }
+
+        // let simd = V3::try_new().unwrap();
+
+        // group.bench_function("ComplexMul8x8NeonFcma64", |b| {
+        //     b.iter(|| {
+        //         simd.vectorize(ComplexMul8x8Avx32 {
+        //             simd,
+        //             alpha,
+        //             matrix: &matrix,
+        //             vector: &vector,
+        //             result: &mut result,
+        //         })
+        //     })
+        // });
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+pub use x86_64::*;
+
+#[cfg(target_arch = "aarch64")]
+pub use aarch64::*;
+
+#[cfg(target_arch = "x86_64")]
+criterion_group!(benches, naive, explicit_simd);
 
 #[cfg(target_arch = "aarch64")]
 criterion_group!(benches, naive, explicit_simd);

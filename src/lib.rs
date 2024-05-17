@@ -628,10 +628,13 @@ pub use aarch64::*;
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64 {
+    use std::arch::x86_64::{__m128, __m256};
+
     use super::*;
 
-    use pulp::{f32x16, f32x8, f32x4, x86::V3, Simd};
     use num_traits::Zero;
+    use pulp::{f32x16, f32x4, f32x8, x86::V3, Simd};
+    // use std::arch::x86_64::{_mm_moveldup_ps};
 
     pub struct ComplexMul8x8Avx32<'a> {
         pub simd: V3,
@@ -649,19 +652,10 @@ pub mod x86_64 {
         pub result: &'a mut [c32; 8],
     }
 
-    pub const fn _MM_SHUFFLE(z: u32, y: u32, x: u32, w: u32) -> i32 {
-        ((z << 6) | (y << 4) | (x << 2) | w) as i32
-    }
-
-    const MASK: i32 = _MM_SHUFFLE(1, 0, 1,0);
-    const MASK2: i32 = _MM_SHUFFLE(3, 2, 3,2);
-
     impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
-
         type Output = ();
 
         fn call(self) -> Self::Output {
-
             let Self {
                 simd,
                 alpha,
@@ -670,63 +664,267 @@ pub mod x86_64 {
                 result,
             } = self;
 
+            let mut a1 = simd.splat_f32x4(0.);
+            let mut a2 = simd.splat_f32x4(0.);
+            let mut a3 = simd.splat_f32x4(0.);
+            let mut a4 = simd.splat_f32x4(0.);
+            let alpha = simd.splat_f32x4(alpha);
 
-            // Load vector
-            let [v1, v2]: [f32x8; 2] = pulp::cast(*vector);
-
-            // v1 = [a, b, c, d, ...]
-
-            // De-interleave vector
-            let v01_re = f32x4(v1.0, v1.0, v1.0, v1.0); // [a, a, a, a]
-            let v01_im = f32x4(v1.1, v1.1, v1.1, v1.1); // [b, b, b, b]
-            let v02_re = f32x4(v1.2, v1.2, v1.2, v1.2); // [a, a, a, a]
-            let v02_im = f32x4(v1.3, v1.3, v1.3, v1.3); // [b, b, b, b]
-            let v03_re = f32x4(v1.4, v1.4, v1.4, v1.4); // [a, a, a, a]
-            let v03_im = f32x4(v1.5, v1.5, v1.5, v1.5); // [b, b, b, b]
-            let v04_re = f32x4(v1.6, v1.6, v1.6, v1.6); // [a, a, a, a]
-            let v04_im = f32x4(v1.7, v1.7, v1.7, v1.7); // [b, b, b, b]
-
-            // Unroll loop
+            let [v1, v2, v3, v4]: [f32x4; 4] = pulp::cast(*vector);
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
-            let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[0]); // column of matrix
 
-            // Deinterleave row
-            let m1_re = f32x4(m1.0, m1.2, m1.4, m1.6); // [e, g, i, k]
-            let m1_im = f32x4(m1.1, m1.3, m1.5, m1.7); // [f, h, j, l]
-            let m2_re = f32x4(m2.0, m2.2, m2.4, m2.6); // [e, g, i, k]
-            let m2_im = f32x4(m2.1, m2.3, m2.5, m2.7); // [f, h, j, l]
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[0]);
+                let v1_re = f32x4(v1.0, v1.0, v1.0, v1.0); // First element of vector
+                let v1_im = f32x4(v1.1, v1.1, v1.1, v1.1);
 
-            // [ae, ag, ai, ak]
-            let a1: f32x4 = simd.mul_f32x4(v01_re, m1_re);
-            let a2: f32x4 = simd.mul_f32x4(v01_re, m2_re);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-            // [af, ah, aj, al]
-            let b1: f32x4 = simd.mul_f32x4(v01_re, m1_im);
-            let b2: f32x4 = simd.mul_f32x4(v01_re, m2_im);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
-            // [be, bg, bi, bk]
-            let c1 = simd.mul_f32x4(v01_im, m1_re);
-            let c2 = simd.mul_f32x4(v01_im, m2_re);
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
-            // [bf, bh, bj, bl]
-            let d1 = simd.mul_f32x4(v01_im, m1_im);
-            let d2 = simd.mul_f32x4(v01_im, m2_im);
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
 
-            // [ae-bf, ag-bh, ai-bj, ak-bl]
-            let re1 = simd.sub_f32x4(a1, d1);
-            let re2 = simd.sub_f32x4(a2, d2);
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[1]);
+                let v1_re = f32x4(v1.2, v1.2, v1.2, v1.2); // First element of vector
+                let v1_im = f32x4(v1.3, v1.3, v1.3, v1.3);
 
-            // [af+be, ah+bg, aj+bi, al+bk]
-            let im1 = simd.add_f32x4(b1, c1);
-            let im2 = simd.add_f32x4(b2, c2);
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
-            let r1 = f32x8(re1.0, im1.0, re1.1, im1.1, re1.2, im1.2, re1.3, im1.3);
-            let r2 = f32x8(re2.0, im2.0, re2.1, im2.1, re2.2, im2.2, re2.3, im2.3);
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[2]);
+                let v1_re = f32x4(v2.0, v2.0, v2.0, v2.0); // First element of vector
+                let v1_im = f32x4(v2.1, v2.1, v2.1, v2.1);
+
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[3]);
+                let v1_re = f32x4(v2.2, v2.2, v2.2, v2.2); // First element of vector
+                let v1_im = f32x4(v2.3, v2.3, v2.3, v2.3);
+
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
 
 
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[4]);
+                let v1_re = f32x4(v3.0, v3.0, v3.0, v3.0); // First element of vector
+                let v1_im = f32x4(v3.1, v3.1, v3.1, v3.1);
 
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[5]);
+                let v1_re = f32x4(v3.2, v3.2, v3.2, v3.2); // First element of vector
+                let v1_im = f32x4(v3.3, v3.3, v3.3, v3.3);
+
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[6]);
+                let v1_re = f32x4(v4.0, v4.0, v4.0, v4.0); // First element of vector
+                let v1_im = f32x4(v4.1, v4.1, v4.1, v4.1);
+
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            {
+                let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[7]);
+                let v1_re = f32x4(v4.2, v4.2, v4.2, v4.2); // First element of vector
+                let v1_im = f32x4(v4.3, v4.3, v4.3, v4.3);
+
+                let prod1 = simd.mul_f32x4(m1, v1_re);
+                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
+                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x4(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x4(m2, v1_re);
+                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
+                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x4(a2, pulp::cast(r2));
+
+                let prod1 = simd.mul_f32x4(m3, v1_re);
+                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
+                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a3 = simd.add_f32x4(a3, pulp::cast(r3));
+
+                let prod1 = simd.mul_f32x4(m4, v1_re);
+                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
+                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a4 = simd.add_f32x4(a4, pulp::cast(r4));
+            }
+
+            a1 = simd.mul_f32x4(alpha, a1);
+            a2 = simd.mul_f32x4(alpha, a2);
+            a3 = simd.mul_f32x4(alpha, a3);
+            a4 = simd.mul_f32x4(alpha, a4);
+
+            let ptr = result.as_mut_ptr() as *mut f32;
+
+            unsafe { simd.sse._mm_store_ps(ptr, std::mem::transmute(a1)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(4), std::mem::transmute(a2)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(8), std::mem::transmute(a3)) }
+            unsafe { simd.sse._mm_store_ps(ptr.add(12), std::mem::transmute(a4)) }
         }
     }
 
@@ -743,7 +941,7 @@ pub mod x86_64 {
 
             let mut matrix = [c32::zero(); 64];
             let mut vector = [c32::zero(); 8];
-            let alpha = c32::one() * 12.;
+            let alpha = c32::one() * 1.;
 
             for i in 0..8 {
                 let num = (i + 1) as f32;
@@ -762,22 +960,6 @@ pub mod x86_64 {
                 }
             }
 
-            // for i in 0..8 {
-            //     for j in 0..8 {
-            //         print!("{:4} ", matrix[i + j * 8]);
-            //     }
-            //     println!();
-            // }
-
-            // println!("");
-
-            // for i in 0..8 {
-            //     for j in 0..8 {
-            //         print!("{:4} ", matrix_t[i + j * 8]);
-            //     }
-            //     println!();
-            // }
-
             matvec8x8_col_major(&matrix, &vector, &mut expected, alpha);
             matvec8x8_row_major(&matrix_t, &vector, &mut expected_t, alpha);
 
@@ -786,14 +968,7 @@ pub mod x86_64 {
                 .zip(expected_t.iter())
                 .for_each(|(e, e_t)| assert!((e - e_t).abs() < 1e-5));
 
-            let mut matrix = [c32::zero(); 64];
             let mut result = [c32::zero(); 8];
-
-            for i in 0..8 {
-                for j in 0..8 {
-                    matrix[i * 8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
-                }
-            }
 
             let simd = V3::try_new().unwrap();
             simd.vectorize(ComplexMul8x8Avx32 {
@@ -804,12 +979,14 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
-            assert!(false);
-            // expected.iter().zip(result).for_each(|(e, r)| {
-            //     println!("e {:?} r {:?}", e, r);
-            //     assert!((e - r).abs() < 1e-10)
-            // });
-        }    }
+            println!("expected {:?}", expected);
+            println!("result {:?}", result);
+
+            expected.iter().zip(result).for_each(|(e, r)| {
+                assert!((e - r).abs() < 1e-10)
+            });
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -833,7 +1010,8 @@ where
         save_buffer[i] += sum * alpha
     }
 }
-
+#[inline(never)]
+// #[no_mangle]
 pub fn matvec8x8_row_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
     U: RlstScalar,
@@ -872,6 +1050,7 @@ where
         save_buffer[i] += sum * alpha;
     }
 }
+
 
 pub fn matvec4x4_col_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
