@@ -651,13 +651,6 @@ pub mod x86_64 {
         pub result: &'a mut [c32; 8],
     }
 
-    pub const fn _MM_SHUFFLE(z: u32, y: u32, x: u32, w: u32) -> i32 {
-        ((z << 6) | (y << 4) | (x << 2) | w) as i32
-    }
-
-    const MASK: i32 = _MM_SHUFFLE(1, 0, 1, 0);
-    const MASK2: i32 = _MM_SHUFFLE(3, 2, 3, 2);
-
     impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
         type Output = ();
 
@@ -724,8 +717,6 @@ pub mod x86_64 {
 
                 let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[1]);
 
-                // println!("v02 {:?} m1 {:?} m2 {:?}", v02, m1, m2);
-
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v02);
                 let m2_re = simd.avx._mm256_mul_ps(m2, v02);
@@ -742,7 +733,6 @@ pub mod x86_64 {
 
                 a1 = simd.avx._mm256_add_ps(a1, r1);
                 a2 = simd.avx._mm256_add_ps(a2, r2);
-                // println!("r1 {:?} r2 {:?}", r1, r2);
             }
 
             // Consider vector[2] matrix[2]
@@ -954,22 +944,6 @@ pub mod x86_64 {
                 }
             }
 
-            // for i in 0..8 {
-            //     for j in 0..8 {
-            //         print!("{:4} ", matrix[i + j * 8]);
-            //     }
-            //     println!();
-            // }
-
-            // println!("");
-
-            // for i in 0..8 {
-            //     for j in 0..8 {
-            //         print!("{:4} ", matrix_t[i + j * 8]);
-            //     }
-            //     println!();
-            // }
-
             matvec8x8_col_major(&matrix, &vector, &mut expected, alpha);
             matvec8x8_row_major(&matrix_t, &vector, &mut expected_t, alpha);
 
@@ -989,14 +963,10 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
-
-            println!("expected {:?}", expected);
-            println!("HERE {:?}", result);
-            assert!(false);
-            // expected.iter().zip(result).for_each(|(e, r)| {
-            //     println!("e {:?} r {:?}", e, r);
-            //     assert!((e - r).abs() < 1e-10)
-            // });
+            expected.iter().zip(result).for_each(|(e, r)| {
+                println!("e {:?} r {:?}", e, r);
+                assert!((e - r).abs() < 1e-10)
+            });
         }
     }
 }
