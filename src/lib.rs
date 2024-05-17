@@ -680,6 +680,9 @@ pub mod x86_64 {
             // Negator
             let neg = simd.avx._mm256_set_ps(-1., 1., -1., 1., -1., 1., -1., 1.);
 
+            // Scale
+            let alpha = simd.avx._mm256_set1_ps(alpha);
+
             // Load vector
             let [v1, v2, v3, v4]: [__m128; 4] = pulp::cast(*vector);
 
@@ -778,7 +781,7 @@ pub mod x86_64 {
                     .avx
                     ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v04), neg); // switch real/imag parts, negate imaginary part
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[1]);
+                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[3]);
 
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v04);
@@ -806,7 +809,7 @@ pub mod x86_64 {
                     .avx
                     ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v05), neg); // switch real/imag parts, negate imaginary part
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[2]);
+                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[4]);
 
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v05);
@@ -834,7 +837,7 @@ pub mod x86_64 {
                     .avx
                     ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v06), neg); // switch real/imag parts, negate imaginary part
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[1]);
+                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[5]);
 
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v06);
@@ -862,7 +865,7 @@ pub mod x86_64 {
                     .avx
                     ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v07), neg); // switch real/imag parts, negate imaginary part
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[2]);
+                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[6]);
 
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v07);
@@ -890,7 +893,7 @@ pub mod x86_64 {
                     .avx
                     ._mm256_mul_ps(simd.avx._mm256_permute_ps::<0b10110001>(v08), neg); // switch real/imag parts, negate imaginary part
 
-                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[1]);
+                let [m1, m2]: [__m256; 2] = pulp::cast(*&matrix[7]);
 
                 // 1. Find the real part of mult
                 let m1_re = simd.avx._mm256_mul_ps(m1, v08);
@@ -910,9 +913,12 @@ pub mod x86_64 {
                 a2 = simd.avx._mm256_add_ps(a2, r2);
             }
 
-            let ptr = result.as_ptr() as *mut f32;
-            unsafe { simd.avx._mm256_store_ps(ptr, a1) }
-            unsafe { simd.avx._mm256_store_ps(ptr.add(8), a2) }
+            a1 = simd.avx._mm256_mul_ps(a1, alpha);
+            a2 = simd.avx._mm256_mul_ps(a2, alpha);
+
+            let ptr = result.as_mut_ptr() as *mut f32;
+            unsafe { simd.avx._mm256_storeu_ps(ptr, a1) }
+            unsafe { simd.avx._mm256_storeu_ps(ptr.add(8), a2) }
         }
     }
 
@@ -929,7 +935,7 @@ pub mod x86_64 {
 
             let mut matrix = [c32::zero(); 64];
             let mut vector = [c32::zero(); 8];
-            let alpha = c32::one() * 12.;
+            let alpha = c32::one() * 1.;
 
             for i in 0..8 {
                 let num = (i + 1) as f32;
@@ -972,14 +978,7 @@ pub mod x86_64 {
                 .zip(expected_t.iter())
                 .for_each(|(e, e_t)| assert!((e - e_t).abs() < 1e-5));
 
-            let mut matrix = [c32::zero(); 64];
             let mut result = [c32::zero(); 8];
-
-            for i in 0..8 {
-                for j in 0..8 {
-                    matrix[i * 8 + j] = c32::new((i + 1) as f32, (j + 1) as f32);
-                }
-            }
 
             let simd = V3::try_new().unwrap();
             simd.vectorize(ComplexMul8x8Avx32 {
@@ -990,6 +989,9 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
+
+            println!("expected {:?}", expected);
+            println!("HERE {:?}", result);
             assert!(false);
             // expected.iter().zip(result).for_each(|(e, r)| {
             //     println!("e {:?} r {:?}", e, r);
