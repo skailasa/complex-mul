@@ -657,12 +657,12 @@ pub mod x86_64 {
 
         {
             let n = std::mem::size_of::<f32x4>() / std::mem::size_of::<f32>();
-            let out: &mut[f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
+            let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
             let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
 
             for i in 0..n {
-                out[i] = x[2*i];
-                out[n+i] = x[2*i+1]
+                out[i] = x[2 * i];
+                out[n + i] = x[2 * i + 1]
             }
         }
 
@@ -699,27 +699,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v1_im.0);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -729,27 +745,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v1_im.1);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -759,27 +791,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v1_im.2);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -789,30 +837,45 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v1_im.3);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
-
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[4]);
@@ -820,27 +883,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v2_im.0);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -850,27 +929,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v2_im.1);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -880,27 +975,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v2_im.2);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -910,27 +1021,43 @@ pub mod x86_64 {
                 let v1_im = simd.splat_f32x4(v2_im.3);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
-                let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let m1 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f32x4(pulp::cast(m1), v1_im);
-                let r1 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r1 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a1 = simd.add_f32x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f32x4(m2, v1_re);
-                let m2 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let m2 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f32x4(pulp::cast(m2), v1_im);
-                let r2 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r2 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a2 = simd.add_f32x4(a2, pulp::cast(r2));
 
                 let prod1 = simd.mul_f32x4(m3, v1_re);
-                let m3 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                let m3 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f32x4(pulp::cast(m3), v1_im);
-                let r3 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r3 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a3 = simd.add_f32x4(a3, pulp::cast(r3));
 
                 let prod1 = simd.mul_f32x4(m4, v1_re);
-                let m4 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                let m4 = simd
+                    .sse
+                    ._mm_shuffle_ps::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f32x4(pulp::cast(m4), v1_im);
-                let r4 = simd.sse3._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                let r4 = simd
+                    .sse3
+                    ._mm_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
                 a4 = simd.add_f32x4(a4, pulp::cast(r4));
             }
 
@@ -1002,9 +1129,10 @@ pub mod x86_64 {
             println!("expected {:?}", expected);
             println!("result {:?}", result);
 
-            expected.iter().zip(result).for_each(|(e, r)| {
-                assert!((e - r).abs() < 1e-10)
-            });
+            expected
+                .iter()
+                .zip(result)
+                .for_each(|(e, r)| assert!((e - r).abs() < 1e-10));
         }
     }
 }
@@ -1070,7 +1198,6 @@ where
         save_buffer[i] += sum * alpha;
     }
 }
-
 
 pub fn matvec4x4_col_major<U>(matrix: &[U], vector: &[U], save_buffer: &mut [U], alpha: U)
 where
