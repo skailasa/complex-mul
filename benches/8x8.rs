@@ -114,7 +114,7 @@ pub mod aarch64 {
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64 {
     use super::*;
-    use complex_mul::{ComplexMul8x8Avx32};
+    use complex_mul::{ComplexMul8x8Sse32};
     use pulp::x86::V3;
     pub fn explicit_simd(c: &mut Criterion) {
         let mut group = c.benchmark_group("explicit simd");
@@ -136,9 +136,9 @@ pub mod x86_64 {
 
         let simd = V3::try_new().unwrap();
 
-        group.bench_function("ComplexMul8x8Avx32", |b| {
+        group.bench_function("ComplexMul8x8Sse32", |b| {
             b.iter(|| {
-                simd.vectorize(ComplexMul8x8Avx32 {
+                simd.vectorize(ComplexMul8x8Sse32 {
                     simd,
                     alpha,
                     matrix: &matrix,
@@ -167,7 +167,7 @@ pub mod x86_64 {
 
         // group.bench_function("ComplexMul8x8NeonFcma64", |b| {
         //     b.iter(|| {
-        //         simd.vectorize(ComplexMul8x8Avx32 {
+        //         simd.vectorize(ComplexMul8x8Sse32 {
         //             simd,
         //             alpha,
         //             matrix: &matrix,
