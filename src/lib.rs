@@ -652,6 +652,23 @@ pub mod x86_64 {
         pub result: &'a mut [c32; 8],
     }
 
+    fn deinterleave(simd: V3, value: [f32x4; 2]) -> [f32x4; 2] {
+        let mut out = [simd.splat_f32x4(0.); 2];
+
+        {
+            let n = std::mem::size_of::<f32x4>() / std::mem::size_of::<f32>();
+            let out: &mut[f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
+            let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
+
+            for i in 0..n {
+                out[i] = x[2*i];
+                out[n+i] = x[2*i+1]
+            }
+        }
+
+        out
+    }
+
     impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
         type Output = ();
 
@@ -670,13 +687,16 @@ pub mod x86_64 {
             let mut a4 = simd.splat_f32x4(0.);
             let alpha = simd.splat_f32x4(alpha);
 
-            let [v1, v2, v3, v4]: [f32x4; 4] = pulp::cast(*vector);
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
+            let (vectors, _) = pulp::as_arrays::<4, _>(vector);
+
+            let [v1_re, v1_im] = deinterleave(simd, pulp::cast(vectors[0]));
+            let [v2_re, v2_im] = deinterleave(simd, pulp::cast(vectors[1]));
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[0]);
-                let v1_re = f32x4(v1.0, v1.0, v1.0, v1.0); // First element of vector
-                let v1_im = f32x4(v1.1, v1.1, v1.1, v1.1);
+                let v1_re = simd.splat_f32x4(v1_re.0);
+                let v1_im = simd.splat_f32x4(v1_im.0);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -705,8 +725,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[1]);
-                let v1_re = f32x4(v1.2, v1.2, v1.2, v1.2); // First element of vector
-                let v1_im = f32x4(v1.3, v1.3, v1.3, v1.3);
+                let v1_re = simd.splat_f32x4(v1_re.1);
+                let v1_im = simd.splat_f32x4(v1_im.1);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -735,8 +755,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[2]);
-                let v1_re = f32x4(v2.0, v2.0, v2.0, v2.0); // First element of vector
-                let v1_im = f32x4(v2.1, v2.1, v2.1, v2.1);
+                let v1_re = simd.splat_f32x4(v1_re.2);
+                let v1_im = simd.splat_f32x4(v1_im.2);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -765,8 +785,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[3]);
-                let v1_re = f32x4(v2.2, v2.2, v2.2, v2.2); // First element of vector
-                let v1_im = f32x4(v2.3, v2.3, v2.3, v2.3);
+                let v1_re = simd.splat_f32x4(v1_re.3);
+                let v1_im = simd.splat_f32x4(v1_im.3);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -796,8 +816,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[4]);
-                let v1_re = f32x4(v3.0, v3.0, v3.0, v3.0); // First element of vector
-                let v1_im = f32x4(v3.1, v3.1, v3.1, v3.1);
+                let v1_re = simd.splat_f32x4(v2_re.0);
+                let v1_im = simd.splat_f32x4(v2_im.0);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -826,8 +846,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[5]);
-                let v1_re = f32x4(v3.2, v3.2, v3.2, v3.2); // First element of vector
-                let v1_im = f32x4(v3.3, v3.3, v3.3, v3.3);
+                let v1_re = simd.splat_f32x4(v2_re.1);
+                let v1_im = simd.splat_f32x4(v2_im.1);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -856,8 +876,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[6]);
-                let v1_re = f32x4(v4.0, v4.0, v4.0, v4.0); // First element of vector
-                let v1_im = f32x4(v4.1, v4.1, v4.1, v4.1);
+                let v1_re = simd.splat_f32x4(v2_re.2);
+                let v1_im = simd.splat_f32x4(v2_im.2);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
@@ -886,8 +906,8 @@ pub mod x86_64 {
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[7]);
-                let v1_re = f32x4(v4.2, v4.2, v4.2, v4.2); // First element of vector
-                let v1_im = f32x4(v4.3, v4.3, v4.3, v4.3);
+                let v1_re = simd.splat_f32x4(v2_re.3);
+                let v1_im = simd.splat_f32x4(v2_im.3);
 
                 let prod1 = simd.mul_f32x4(m1, v1_re);
                 let m1 = simd.sse._mm_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
