@@ -636,7 +636,7 @@ pub mod x86_64 {
     use pulp::{f32x16, f32x4, f32x8, x86::V3, Simd};
     // use std::arch::x86_64::{_mm_moveldup_ps};
 
-    pub struct ComplexMul8x8Avx32<'a> {
+    pub struct ComplexMul8x8Sse32<'a> {
         pub simd: V3,
         pub alpha: f32,
         pub matrix: &'a [c32; 64],
@@ -669,7 +669,7 @@ pub mod x86_64 {
         out
     }
 
-    impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
+    impl pulp::NullaryFnOnce for ComplexMul8x8Sse32<'_> {
         type Output = ();
 
         fn call(self) -> Self::Output {
@@ -991,7 +991,7 @@ pub mod x86_64 {
             let mut result = [c32::zero(); 8];
 
             let simd = V3::try_new().unwrap();
-            simd.vectorize(ComplexMul8x8Avx32 {
+            simd.vectorize(ComplexMul8x8Sse32 {
                 simd,
                 alpha: alpha.re(),
                 matrix: &matrix,
