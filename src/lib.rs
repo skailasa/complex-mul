@@ -1,6 +1,26 @@
 use rlst::{c32, c64, RlstScalar};
 
+macro_rules! generate_deinterleave_fn {
+    ($fn_name:ident, $simd_type:ty, $array_type:ty, $splat_method:ident, $scalar_type:ty) => {
+        fn $fn_name(simd: $simd_type, value: [$array_type; 2]) -> [$array_type; 2] {
+            let mut out = [simd.$splat_method(0.); 2];
 
+            {
+                let n = std::mem::size_of::<$array_type>() / std::mem::size_of::<$scalar_type>();
+                let out: &mut [$scalar_type] =
+                    bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
+                let x: &[$scalar_type] = bytemuck::cast_slice(std::slice::from_ref(&value));
+
+                for i in 0..n {
+                    out[i] = x[2 * i];
+                    out[n + i] = x[2 * i + 1];
+                }
+            }
+
+            out
+        }
+    };
+}
 
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64 {
@@ -635,7 +655,7 @@ pub mod x86_64 {
     use super::*;
 
     use num_traits::Zero;
-    use pulp::{f32x16, f32x4, f32x8, x86::V3, Simd};
+    use pulp::{f32x16, f32x4, f32x8, f64x4, x86::V3, Simd};
     // use std::arch::x86_64::{_mm_moveldup_ps};
 
     pub struct ComplexMul8x8Sse32<'a> {
@@ -662,64 +682,9 @@ pub mod x86_64 {
         pub result: &'a mut [c32; 8],
     }
 
-
-    macro_rules! generate_deinterleave_fn {
-        ($fn_name:ident, $simd_type:ty, $array_type:ty, $splat_method:ident) => {
-            fn $fn_name(simd: $simd_type, value: [$array_type; 2]) -> [$array_type; 2] {
-                let mut out = [simd.$splat_method(0.); 2];
-
-                {
-                    let n = std::mem::size_of::<$array_type>() / std::mem::size_of::<f32>();
-                    let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
-                    let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
-
-                    for i in 0..n {
-                        out[i] = x[2 * i];
-                        out[n + i] = x[2 * i + 1];
-                    }
-                }
-
-                out
-            }
-        };
-    }
-
-    generate_deinterleave_fn!(deinterleave, V3, f32x4, splat_f32x4);
-    generate_deinterleave_fn!(deinterleave_avx, V3, f32x8, splat_f32x8);
-
-    fn deinterleave(simd: V3, value: [f32x4; 2]) -> [f32x4; 2] {
-        let mut out = [simd.splat_f32x4(0.); 2];
-
-        {
-            let n = std::mem::size_of::<f32x4>() / std::mem::size_of::<f32>();
-            let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
-            let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
-
-            for i in 0..n {
-                out[i] = x[2 * i];
-                out[n + i] = x[2 * i + 1]
-            }
-        }
-
-        out
-    }
-
-    fn deinterleave_avx(simd: V3, value: [f32x8; 2]) -> [f32x8; 2] {
-        let mut out = [simd.splat_f32x8(0.); 2];
-
-        {
-            let n = std::mem::size_of::<f32x8>() / std::mem::size_of::<f32>();
-            let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
-            let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
-
-            for i in 0..n {
-                out[i] = x[2 * i];
-                out[n + i] = x[2 * i + 1]
-            }
-        }
-
-        out
-    }
+    generate_deinterleave_fn!(deinterleave_sse_f32, V3, f32x4, splat_f32x4, f32);
+    generate_deinterleave_fn!(deinterleave_avx_f32, V3, f32x8, splat_f32x8, f32);
+    generate_deinterleave_fn!(deinterleave_avx_f64, V3, f64x4, splat_f64x4, f64);
 
     impl pulp::NullaryFnOnce for ComplexMul8x8Sse32<'_> {
         type Output = ();
@@ -742,8 +707,8 @@ pub mod x86_64 {
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
             let (vectors, _) = pulp::as_arrays::<4, _>(vector);
 
-            let [v1_re, v1_im] = deinterleave(simd, pulp::cast(vectors[0]));
-            let [v2_re, v2_im] = deinterleave(simd, pulp::cast(vectors[1]));
+            let [v1_re, v1_im] = deinterleave_sse_f32(simd, pulp::cast(vectors[0]));
+            let [v2_re, v2_im] = deinterleave_sse_f32(simd, pulp::cast(vectors[1]));
 
             {
                 let [m1, m2, m3, m4]: [f32x4; 4] = pulp::cast(*&matrix[0]);
@@ -1144,7 +1109,7 @@ pub mod x86_64 {
 
             let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
             let (vectors, _) = pulp::as_arrays::<8, _>(vector);
-            let [v_re, v_im] = deinterleave_avx(simd, pulp::cast(vectors[0]));
+            let [v_re, v_im] = deinterleave_avx_f32(simd, pulp::cast(vectors[0]));
 
             {
                 let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[0]); // 9 registers
