@@ -1,5 +1,7 @@
 use rlst::{c32, c64, RlstScalar};
 
+
+
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64 {
     use super::*;
@@ -659,6 +661,31 @@ pub mod x86_64 {
         pub vector: &'a [c32; 8],
         pub result: &'a mut [c32; 8],
     }
+
+
+    macro_rules! generate_deinterleave_fn {
+        ($fn_name:ident, $simd_type:ty, $array_type:ty, $splat_method:ident) => {
+            fn $fn_name(simd: $simd_type, value: [$array_type; 2]) -> [$array_type; 2] {
+                let mut out = [simd.$splat_method(0.); 2];
+
+                {
+                    let n = std::mem::size_of::<$array_type>() / std::mem::size_of::<f32>();
+                    let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
+                    let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
+
+                    for i in 0..n {
+                        out[i] = x[2 * i];
+                        out[n + i] = x[2 * i + 1];
+                    }
+                }
+
+                out
+            }
+        };
+    }
+
+    generate_deinterleave_fn!(deinterleave, V3, f32x4, splat_f32x4);
+    generate_deinterleave_fn!(deinterleave_avx, V3, f32x8, splat_f32x8);
 
     fn deinterleave(simd: V3, value: [f32x4; 2]) -> [f32x4; 2] {
         let mut out = [simd.splat_f32x4(0.); 2];
