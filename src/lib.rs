@@ -1358,8 +1358,6 @@ pub mod x86_64 {
             let [v1_re, v1_im] = deinterleave_avx_f64(simd, pulp::cast(vectors[0]));
             let [v2_re, v2_im] = deinterleave_avx_f64(simd, pulp::cast(vectors[1]));
 
-
-
             {
                 let [m1, m2, m3, m4]: [f64x4; 4] = pulp::cast(*&matrix[0]);
                 let v1_re = simd.splat_f64x4(v1_re.0);
@@ -1802,7 +1800,6 @@ pub mod x86_64 {
                 vector: &vector,
                 result: &mut result,
             });
-
 
             expected
                 .iter()
