@@ -644,6 +644,14 @@ pub mod x86_64 {
         pub result: &'a mut [c32; 8],
     }
 
+    pub struct ComplexMul8x8Avx32<'a> {
+        pub simd: V3,
+        pub alpha: f32,
+        pub matrix: &'a [c32; 64],
+        pub vector: &'a [c32; 8],
+        pub result: &'a mut [c32; 8],
+    }
+
     pub struct ComplexMul8x8Avx64<'a> {
         pub simd: V3,
         pub alpha: f32,
@@ -668,6 +676,24 @@ pub mod x86_64 {
 
         out
     }
+
+    fn deinterleave_avx(simd: V3, value: [f32x8; 2]) -> [f32x8; 2] {
+        let mut out = [simd.splat_f32x8(0.); 2];
+
+        {
+            let n = std::mem::size_of::<f32x8>() / std::mem::size_of::<f32>();
+            let out: &mut [f32] = bytemuck::cast_slice_mut(std::slice::from_mut(&mut out));
+            let x: &[f32] = bytemuck::cast_slice(std::slice::from_ref(&value));
+
+            for i in 0..n {
+                out[i] = x[2 * i];
+                out[n + i] = x[2 * i + 1]
+            }
+        }
+
+        out
+    }
+
 
     impl pulp::NullaryFnOnce for ComplexMul8x8Sse32<'_> {
         type Output = ();
@@ -1075,6 +1101,248 @@ pub mod x86_64 {
         }
     }
 
+    impl pulp::NullaryFnOnce for ComplexMul8x8Avx32<'_> {
+        type Output = ();
+
+        fn call(self) -> Self::Output {
+            let Self {
+                simd,
+                alpha,
+                matrix,
+                vector,
+                result,
+            } = self;
+
+            let mut a1 = simd.splat_f32x8(0.);
+            let mut a2 = simd.splat_f32x8(0.);
+
+            let (matrix, _) = pulp::as_arrays::<8, _>(matrix);
+            let (vectors, _) = pulp::as_arrays::<8, _>(vector);
+            let [v_re, v_im] = deinterleave_avx(simd, pulp::cast(vectors[0]));
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[0]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.0);
+                let v1_im = simd.splat_f32x8(v_im.0);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[1]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.1);
+                let v1_im = simd.splat_f32x8(v_im.1);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[2]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.2);
+                let v1_im = simd.splat_f32x8(v_im.2);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[3]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.3);
+                let v1_im = simd.splat_f32x8(v_im.3);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[4]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.4);
+                let v1_im = simd.splat_f32x8(v_im.4);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[5]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.5);
+                let v1_im = simd.splat_f32x8(v_im.5);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[6]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.6);
+                let v1_im = simd.splat_f32x8(v_im.6);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            {
+                let [m1, m2]: [f32x8; 2] = pulp::cast(*&matrix[7]); // 9 registers
+                let v1_re = simd.splat_f32x8(v_re.7);
+                let v1_im = simd.splat_f32x8(v_im.7);
+
+                let prod1 = simd.mul_f32x8(m1, v1_re);
+                let m1 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                let prod2 = simd.mul_f32x8(pulp::cast(m1), v1_im);
+                let r1 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a1 = simd.add_f32x8(a1, pulp::cast(r1));
+
+                let prod1 = simd.mul_f32x8(m2, v1_re);
+                let m2 = simd
+                    .avx
+                    ._mm256_shuffle_ps::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                let prod2 = simd.mul_f32x8(pulp::cast(m2), v1_im);
+                let r2 = simd
+                    .avx
+                    ._mm256_addsub_ps(pulp::cast(prod1), pulp::cast(prod2));
+                a2 = simd.add_f32x8(a2, pulp::cast(r2));
+            }
+
+            let alpha = simd.splat_f32x8(alpha);
+            a1 = simd.mul_f32x8(alpha, a1);
+            a2 = simd.mul_f32x8(alpha, a2);
+
+            // Store results
+            {
+                let ptr = result.as_mut_ptr() as *mut f32;
+                unsafe { simd.avx._mm256_storeu_ps(ptr, std::mem::transmute(a1)) }
+                unsafe {
+                    simd.avx
+                        ._mm256_storeu_ps(ptr.add(8), std::mem::transmute(a2))
+                }
+            }
+        }
+    }
     #[cfg(test)]
     mod test {
 
@@ -1126,9 +1394,23 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
+
+            expected
+                .iter()
+                .zip(result)
+                .for_each(|(e, r)| assert!((e - r).abs() < 1e-10));
+
+            let mut result = [c32::zero(); 8];
+            simd.vectorize(ComplexMul8x8Avx32 {
+                    simd,
+                    alpha: alpha.re(),
+                    matrix: &matrix,
+                    vector: &vector,
+                    result: &mut result,
+                });
+
             println!("expected {:?}", expected);
             println!("result {:?}", result);
-
             expected
                 .iter()
                 .zip(result)
