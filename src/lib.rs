@@ -694,7 +694,6 @@ pub mod x86_64 {
         out
     }
 
-
     impl pulp::NullaryFnOnce for ComplexMul8x8Sse32<'_> {
         type Output = ();
 
@@ -1394,7 +1393,6 @@ pub mod x86_64 {
                 result: &mut result,
             });
 
-
             expected
                 .iter()
                 .zip(result)
@@ -1402,12 +1400,12 @@ pub mod x86_64 {
 
             let mut result = [c32::zero(); 8];
             simd.vectorize(ComplexMul8x8Avx32 {
-                    simd,
-                    alpha: alpha.re(),
-                    matrix: &matrix,
-                    vector: &vector,
-                    result: &mut result,
-                });
+                simd,
+                alpha: alpha.re(),
+                matrix: &matrix,
+                vector: &vector,
+                result: &mut result,
+            });
 
             println!("expected {:?}", expected);
             println!("result {:?}", result);
