@@ -1358,6 +1358,8 @@ pub mod x86_64 {
             let [v1_re, v1_im] = deinterleave_avx_f64(simd, pulp::cast(vectors[0]));
             let [v2_re, v2_im] = deinterleave_avx_f64(simd, pulp::cast(vectors[1]));
 
+
+
             {
                 let [m1, m2, m3, m4]: [f64x4; 4] = pulp::cast(*&matrix[0]);
                 let v1_re = simd.splat_f64x4(v1_re.0);
@@ -1366,17 +1368,18 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
                     ._mm256_addsub_pd(pulp::cast(prod1), pulp::cast(prod2));
+
                 a1 = simd.add_f64x4(a1, pulp::cast(r1));
 
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1386,7 +1389,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1396,7 +1399,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1412,7 +1415,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1422,7 +1425,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1432,7 +1435,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1442,7 +1445,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1458,7 +1461,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1468,7 +1471,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1478,7 +1481,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1488,7 +1491,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1504,7 +1507,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1514,7 +1517,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1524,7 +1527,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1534,7 +1537,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1550,7 +1553,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1560,7 +1563,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1570,7 +1573,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1580,7 +1583,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1596,7 +1599,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1606,7 +1609,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1616,7 +1619,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1626,7 +1629,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1642,7 +1645,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1652,7 +1655,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1662,7 +1665,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1672,7 +1675,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1688,7 +1691,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m1, v1_re);
                 let m1 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m1), pulp::cast(m1));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m1), pulp::cast(m1));
                 let prod2 = simd.mul_f64x4(pulp::cast(m1), v1_im);
                 let r1 = simd
                     .avx
@@ -1698,7 +1701,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m2, v1_re);
                 let m2 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m2), pulp::cast(m2));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m2), pulp::cast(m2));
                 let prod2 = simd.mul_f64x4(pulp::cast(m2), v1_im);
                 let r2 = simd
                     .avx
@@ -1708,7 +1711,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m3, v1_re);
                 let m3 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m3), pulp::cast(m3));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m3), pulp::cast(m3));
                 let prod2 = simd.mul_f64x4(pulp::cast(m3), v1_im);
                 let r3 = simd
                     .avx
@@ -1718,7 +1721,7 @@ pub mod x86_64 {
                 let prod1 = simd.mul_f64x4(m4, v1_re);
                 let m4 = simd
                     .avx
-                    ._mm256_shuffle_pd::<0b10110001>(pulp::cast(m4), pulp::cast(m4));
+                    ._mm256_shuffle_pd::<0b0101>(pulp::cast(m4), pulp::cast(m4));
                 let prod2 = simd.mul_f64x4(pulp::cast(m4), v1_im);
                 let r4 = simd
                     .avx
@@ -1799,6 +1802,7 @@ pub mod x86_64 {
                 vector: &vector,
                 result: &mut result,
             });
+
 
             expected
                 .iter()
